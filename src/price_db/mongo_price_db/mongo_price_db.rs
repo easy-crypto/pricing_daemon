@@ -8,5 +8,5 @@ pub struct MongoPriceDBConfig {
     pub username: Option<String>,
     pub password: Option<String>,
     pub host: Option<String>,
-    pub port: Option<u16>,
+    pub db_name: Option<String>,
 }
