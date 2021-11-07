@@ -1,1 +1,1 @@
-web: ./target/release/pricing_daemon
+worker: ./target/release/pricing_daemon
