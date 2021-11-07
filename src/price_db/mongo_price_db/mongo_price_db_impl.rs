@@ -12,6 +12,8 @@ use log::info;
 
 use super::mongo_price_db::{MongoPriceDB, MongoPriceDBConfig};
 
+static PRICE_COLLECTION_NAME: &str = "prices";
+
 impl MongoPriceDBConfig {
     pub fn new(username: &str, password: &str, host: &str, db_name: &str) -> Self {
         MongoPriceDBConfig {
@@ -39,12 +41,29 @@ impl MongoPriceDB {
         let db = client.database(&db_name);
         Ok(MongoPriceDB { db })
     }
+
+    async fn clean_up(&self) -> Result<(), Box<dyn Error>> {
+        let price_collection = self.db.collection::<Price>(PRICE_COLLECTION_NAME);
+        let dt = Utc::now() - Duration::days(30);
+        let delete_query = doc! { "_id": { "$lt": dt.to_string() }};
+        let res = price_collection
+            .delete_many(delete_query.clone(), None)
+            .await?;
+        info!(
+            "Clean up old data older than {:?}. count: {}",
+            delete_query, res.deleted_count
+        );
+        Ok(())
+    }
 }
 
 #[async_trait(?Send)]
 impl PriceDB for MongoPriceDB {
     async fn insert_many(&self, prices: Vec<Price>) -> Result<(), Box<dyn Error>> {
-        let price_collection = self.db.collection::<Price>("prices");
+        let price_collection = self.db.collection::<Price>(PRICE_COLLECTION_NAME);
+        // remove any data that is one month old.
+        self.clean_up().await?;
+
         let res = price_collection.insert_many(prices, None).await?;
         info!("Inserted Ids: {:?}", res.inserted_ids);
         Ok(())
