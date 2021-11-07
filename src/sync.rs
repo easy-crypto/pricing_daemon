@@ -1,7 +1,9 @@
 use clap::{crate_authors, crate_description, crate_name, crate_version, App, Arg};
 use dotenv::dotenv;
-use std::env;
+use log::{error, info};
 use std::error::Error;
+use std::time::Duration;
+use std::{env, thread};
 
 use crate::price_manager::db_price_manager::db_price_manager::DBPriceManager;
 use crate::price_manager::price_manager::PriceManager;
@@ -116,7 +118,11 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
 }
 
 pub async fn sync_price_data(manager: Box<dyn PriceManager>) -> Result<(), Box<dyn Error>> {
-    manager.update_price_data().await?;
-    println!("sync price data > OK");
-    Ok(())
+    loop {
+        match manager.update_price_data().await {
+            Ok(()) => info!("ok"),
+            Err(e) => error!("error: {:?}", e),
+        }
+        thread::sleep(Duration::new(60, 0));
+    }
 }
